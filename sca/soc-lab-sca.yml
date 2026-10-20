@@ -1,0 +1,53 @@
+policy:
+  id: "soc_lab_telemetry"
+  file: "soc-lab-sca.yml"
+  name: "SOC Lab — проверки телеметрии и базового hardening (Windows)"
+  description: "Проверяет настройки, от которых зависит обнаружение в стенде: аудит, логирование PowerShell, служба Sysmon."
+  references:
+    - "ГОСТ Р 57580.1 (группы РВП, АНЗ)"
+    - "CIS Microsoft Windows 10 Benchmark"
+
+requirements:
+  title: "Применимо к Windows 10/Server с установленным Wazuh-агентом"
+  description: "Хост ОС семейства Windows"
+  condition: all
+  rules:
+    - 'r:HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion -> ProductName'
+
+checks:
+  - id: 90001
+    title: "Включён аудит создания процессов (Process Creation)"
+    description: "Без события 4688/Sysmon-1 не работает большинство правил обнаружения."
+    rationale: "РВП: регистрация событий ИБ."
+    remediation: "auditpol /set /subcategory:\"Process Creation\" /success:enable /failure:enable"
+    condition: all
+    rules:
+      - 'c:auditpol /get /subcategory:"Process Creation" -> r:Success'
+
+  - id: 90002
+    title: "Включено логирование блоков сценариев PowerShell (ScriptBlockLogging)"
+    description: "Нужно для детекта обфусцированного/закодированного PowerShell."
+    rationale: "РВП: полнота регистрации."
+    remediation: "reg add HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging /v EnableScriptBlockLogging /t REG_DWORD /d 1 /f"
+    condition: all
+    rules:
+      - 'r:HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\PowerShell\ScriptBlockLogging -> EnableScriptBlockLogging -> 1'
+
+  - id: 90003
+    title: "Служба Sysmon установлена и запущена"
+    description: "Основной источник хостовой телеметрии стенда."
+    rationale: "РВП: сбор событий конечных точек."
+    remediation: "Установить Sysmon с конфигом sysmon-modular (scripts/install-agent.ps1)."
+    condition: any
+    rules:
+      - 'c:powershell -c "(Get-Service Sysmon64).Status" -> r:Running'
+      - 'c:powershell -c "(Get-Service Sysmon).Status" -> r:Running'
+
+  - id: 90004
+    title: "Протокол SMBv1 отключён"
+    description: "Устаревший уязвимый протокол (EternalBlue и пр.)."
+    rationale: "ЗВК/АНЗ: устранение известных уязвимостей."
+    remediation: "Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart"
+    condition: all
+    rules:
+      - 'r:HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\mrxsmb10 -> Start -> 4'

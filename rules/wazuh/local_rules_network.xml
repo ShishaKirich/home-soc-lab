@@ -1,0 +1,31 @@
+<!--
+  Корреляция сетевых событий Suricata в Wazuh. Диапазон ID: 100200-100249.
+  Требует подключённого eve.json (см. docs/04-suricata-nids.md).
+  Базовое правило-разбор Suricata в Wazuh имеет id 86601 (группа suricata); сверьтесь
+  со своей версией: grep -R "Suricata" /var/ossec/ruleset/rules/ | head
+-->
+<group name="soc_lab,suricata,network,">
+
+  <rule id="100200" level="6">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature_id" type="pcre2">^100000[1-4]$</field>
+    <description>Suricata: сетевая разведка/подбор в лаборатории — $(alert.signature)</description>
+    <mitre><id>T1046</id><id>T1595</id></mitre>
+  </rule>
+
+  <!-- Серия сетевых алертов с одного источника за минуту = активная фаза атаки -->
+  <rule id="100201" level="12" frequency="6" timeframe="60">
+    <if_matched_sid>100200</if_matched_sid>
+    <same_field>data.src_ip</same_field>
+    <description>Suricata: интенсивная сетевая активность с $(data.src_ip) — вероятная атака</description>
+    <mitre><id>T1046</id></mitre>
+  </rule>
+
+  <rule id="100210" level="10">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature_id">1000010</field>
+    <description>Suricata: веб-атака (SQLi) на приложение стенда с $(data.src_ip)</description>
+    <mitre><id>T1190</id></mitre>
+  </rule>
+
+</group>

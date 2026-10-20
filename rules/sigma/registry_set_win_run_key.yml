@@ -1,0 +1,24 @@
+title: Изменение ключа автозапуска Run/RunOnce
+id: 6d1c3a2e-5b1f-4c3e-9a51-0f3b8d2a1003
+status: experimental
+description: Запись в ключи Run/RunOnce обеспечивает автозапуск программы при входе пользователя.
+author: Kirill Shishkin
+date: 2026-10-20
+references:
+    - https://attack.mitre.org/techniques/T1547/001/
+tags:
+    - attack.persistence
+    - attack.t1547.001
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\Software\Microsoft\Windows\CurrentVersion\Run\'
+            - '\Software\Microsoft\Windows\CurrentVersion\RunOnce\'
+    condition: selection
+falsepositives:
+    - Установка легитимного ПО (OneDrive, Teams и т.п.)
+level: medium
+# Wazuh: rule 100130

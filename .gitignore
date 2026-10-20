@@ -1,0 +1,21 @@
+# Образы и артефакты ВМ
+*.ova
+*.vdi
+*.vmdk
+*.evtx
+*.dmp
+archives*.json
+
+# Секреты и рантайм — НИКОГДА не коммитить
+*.env
+.env
+secrets*
+*token*
+*apikey*
+triage.db
+baseline-alerts.json
+fp_report.md
+
+# Python
+__pycache__/
+*.pyc

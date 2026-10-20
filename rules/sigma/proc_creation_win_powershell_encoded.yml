@@ -1,0 +1,28 @@
+title: PowerShell с закодированной командой
+id: 6d1c3a2e-5b1f-4c3e-9a51-0f3b8d2a1001
+status: experimental
+description: Обнаруживает запуск PowerShell с параметром -EncodedCommand, который часто используется для сокрытия полезной нагрузки.
+author: Kirill Shishkin
+date: 2026-10-20
+references:
+    - https://attack.mitre.org/techniques/T1059/001/
+tags:
+    - attack.execution
+    - attack.t1059.001
+    - attack.defense-evasion
+    - attack.t1027
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
+    selection_cli:
+        CommandLine|re: '(?i)\s-(e|en|enc|enco|encodedcommand)\s+[A-Za-z0-9+/=]{20,}'
+    condition: all of selection_*
+falsepositives:
+    - Скрипты администрирования и агенты управления (SCCM, Intune)
+level: high
+# Wazuh: rule 100100

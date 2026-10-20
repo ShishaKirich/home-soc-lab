@@ -1,0 +1,123 @@
+<!--
+  Собственные правила обнаружения для Home SOC Lab.
+  Источник телеметрии: Sysmon (sysmon-modular) через Wazuh Agent (eventchannel).
+  Диапазон ID: 100100-100199.
+
+  Имена групп sysmon_event* взяты из штатного набора правил Wazuh. Если правило не срабатывает,
+  сверьте их с вашей версией:
+    grep -o 'sysmon_event[_0-9]*' /var/ossec/ruleset/rules/0595-win-sysmon_rules.xml | sort -u
+  Каждое правило проверяйте через /var/ossec/bin/wazuh-logtest на реальном событии.
+-->
+
+<group name="soc_lab,windows,sysmon,">
+
+  <!-- ============ T1059.001: PowerShell ============ -->
+
+  <rule id="100100" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(powershell|pwsh)\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\s-(e|en|enc|enco|encodedcommand)\s+[A-Za-z0-9+/=]{20,}</field>
+    <description>PowerShell запущен с закодированной командой (-EncodedCommand)</description>
+    <mitre><id>T1059.001</id><id>T1027</id></mitre>
+  </rule>
+
+  <rule id="100101" level="10">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(iex|invoke-expression).{0,80}(downloadstring|invoke-webrequest|iwr|net\.webclient)</field>
+    <description>PowerShell: загрузка и выполнение кода из сети (download cradle)</description>
+    <mitre><id>T1059.001</id><id>T1105</id></mitre>
+  </rule>
+
+  <!-- ============ T1003.001: дамп памяти LSASS ============ -->
+
+  <rule id="100110" level="12">
+    <if_group>sysmon_event_10</if_group>
+    <field name="win.eventdata.targetImage" type="pcre2">(?i)\\lsass\.exe$</field>
+    <field name="win.eventdata.grantedAccess" type="pcre2">(?i)^0x(1010|1410|1438|143a|1fffff)$</field>
+    <field name="win.eventdata.sourceImage" type="pcre2" negate="yes">(?i)\\(MsMpEng|wmiprvse|svchost|wininit|csrss|lsm)\.exe$</field>
+    <description>Подозрительный доступ к памяти LSASS из $(win.eventdata.sourceImage)</description>
+    <mitre><id>T1003.001</id></mitre>
+  </rule>
+
+  <rule id="100111" level="14">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)comsvcs(\.dll)?.{0,10}minidump</field>
+    <description>Дамп процесса через comsvcs.dll MiniDump (LOLBin)</description>
+    <mitre><id>T1003.001</id><id>T1218.011</id></mitre>
+  </rule>
+
+  <!-- ============ Закрепление ============ -->
+
+  <rule id="100120" level="8">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\schtasks\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)/create</field>
+    <description>Создание запланированной задачи: $(win.eventdata.commandLine)</description>
+    <mitre><id>T1053.005</id></mitre>
+  </rule>
+
+  <rule id="100121" level="12">
+    <if_sid>100120</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(\\appdata\\|\\temp\\|\\users\\public\\|powershell|cmd\.exe /c|mshta|rundll32)</field>
+    <description>Запланированная задача запускает код из пользовательского каталога или интерпретатора</description>
+    <mitre><id>T1053.005</id></mitre>
+  </rule>
+
+  <rule id="100130" level="10">
+    <if_group>sysmon_event_13</if_group>
+    <field name="win.eventdata.targetObject" type="pcre2">(?i)\\Software\\Microsoft\\Windows\\CurrentVersion\\(Run|RunOnce)\\</field>
+    <description>Изменение ключа автозапуска реестра: $(win.eventdata.targetObject)</description>
+    <mitre><id>T1547.001</id></mitre>
+  </rule>
+
+  <!-- ============ Учётные записи ============ -->
+
+  <rule id="100140" level="8">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\net1?\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)\suser\s+\S+\s+.*/add</field>
+    <description>Создание локальной учётной записи через net user /add</description>
+    <mitre><id>T1136.001</id></mitre>
+  </rule>
+
+  <rule id="100141" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\net1?\.exe$</field>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)localgroup\s+("?administrators"?|"?администраторы"?)\s+.*/add</field>
+    <description>Добавление пользователя в группу локальных администраторов</description>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- ============ Противодействие защите ============ -->
+
+  <rule id="100150" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)(wevtutil(\.exe)?\s+(cl|clear-log)|clear-eventlog)</field>
+    <description>Очистка журналов событий Windows</description>
+    <mitre><id>T1070.001</id></mitre>
+  </rule>
+
+  <rule id="100160" level="12">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.commandLine" type="pcre2">(?i)set-mppreference.{0,60}-(disablerealtimemonitoring|disablebehaviormonitoring|disableioavprotection)\s+(\$true|1)</field>
+    <description>Попытка отключить Microsoft Defender через Set-MpPreference</description>
+    <mitre><id>T1562.001</id></mitre>
+  </rule>
+
+  <!-- ============ Разведка: корреляция по частоте ============ -->
+
+  <rule id="100170" level="3">
+    <if_group>sysmon_event1</if_group>
+    <field name="win.eventdata.image" type="pcre2">(?i)\\(whoami|systeminfo|ipconfig|net1?|nltest|quser|tasklist|netstat|arp|route)\.exe$</field>
+    <description>Запуск утилиты разведки: $(win.eventdata.image)</description>
+    <mitre><id>T1082</id><id>T1033</id></mitre>
+  </rule>
+
+  <rule id="100171" level="10" frequency="5" timeframe="120">
+    <if_matched_sid>100170</if_matched_sid>
+    <same_location />  <!-- location содержит имя агента: считаем события в пределах одного хоста -->
+    <description>Серия команд разведки на хосте за 2 минуты: вероятная ручная активность атакующего</description>
+    <mitre><id>T1082</id><id>T1087.001</id><id>T1016</id></mitre>
+  </rule>
+
+</group>

@@ -1,0 +1,8 @@
+{
+  "rule": "registry_set_win_run_key.yml",
+  "expect": "nomatch",
+  "event": {
+    "TargetObject": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\EnableLUA",
+    "Details": "DWORD (0x00000001)"
+  }
+}

@@ -1,0 +1,63 @@
+<!--
+  Детекты атак на Active Directory. Диапазон ID: 100300-100349.
+  Источник: журнал Security контроллера домена (eventchannel) через Wazuh-агент.
+  Базовые ID разбора Windows Security в Wazuh — группа windows,win_security; при
+  несрабатывании сверьте if_sid/поля через wazuh-logtest на реальном событии.
+-->
+<group name="soc_lab,windows,active_directory,">
+
+  <!-- T1558.003 Kerberoasting: запрос сервисного билета (4769) со слабым шифром RC4 (0x17) -->
+  <rule id="100300" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.ticketEncryptionType" type="pcre2">(?i)^0x17$</field>
+    <field name="win.eventdata.serviceName" type="pcre2" negate="yes">(?i)^krbtgt$|\$$</field>
+    <description>Возможный Kerberoasting: запрос TGS c RC4 для службы $(win.eventdata.serviceName)</description>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+
+  <!-- T1558.004 AS-REP roasting: аутентификация Kerberos (4768) без предаутентификации -->
+  <rule id="100301" level="10">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4768$</field>
+    <field name="win.eventdata.preAuthType" type="pcre2">^0$</field>
+    <description>Возможный AS-REP roasting: запрос TGT без предаутентификации для $(win.eventdata.targetUserName)</description>
+    <mitre><id>T1558.004</id></mitre>
+  </rule>
+
+  <!-- T1003.006 DCSync: доступ к объекту (4662) с GUID операций репликации каталога -->
+  <rule id="100310" level="14">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4662$</field>
+    <field name="win.eventdata.properties" type="pcre2">(?i)1131f6a[ad]-9c07-11d1-f79f-00c04fc2dcd2</field>
+    <field name="win.eventdata.subjectUserName" type="pcre2" negate="yes">(?i)\$$</field>
+    <description>Возможный DCSync: репликация каталога инициирована учётной записью пользователя $(win.eventdata.subjectUserName)</description>
+    <mitre><id>T1003.006</id></mitre>
+  </rule>
+
+  <!-- T1550.002 Pass-the-Hash: сетевой вход NTLM типа 9 (NewCredentials) -->
+  <rule id="100320" level="12">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.logonType">^9$</field>
+    <field name="win.eventdata.authenticationPackageName" type="pcre2">(?i)NTLM</field>
+    <field name="win.eventdata.logonProcessName" type="pcre2">(?i)seclogo</field>
+    <description>Возможный Pass-the-Hash: вход LogonType 9 по NTLM ($(win.eventdata.targetUserName))</description>
+    <mitre><id>T1550.002</id></mitre>
+  </rule>
+
+  <!-- T1087.002 Перечисление каталога (BloodHound): всплеск обращений к объектам AD -->
+  <rule id="100330" level="5">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^466[12]$</field>
+    <description>Доступ к объекту каталога AD</description>
+    <mitre><id>T1087.002</id></mitre>
+  </rule>
+  <rule id="100331" level="10" frequency="50" timeframe="60">
+    <if_matched_sid>100330</if_matched_sid>
+    <same_field>win.eventdata.subjectUserName</same_field>
+    <description>Массовое перечисление объектов AD пользователем $(win.eventdata.subjectUserName) — возможен BloodHound</description>
+    <mitre><id>T1087.002</id><id>T1069.002</id></mitre>
+  </rule>
+
+</group>

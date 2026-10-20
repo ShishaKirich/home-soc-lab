@@ -1,0 +1,56 @@
+name: validate-rules
+
+# Detection-as-Code: при каждом коммите проверяем синтаксис правил и прогоняем unit-тесты.
+on:
+  push:
+    paths:
+      - 'rules/**'
+      - 'tests/**'
+      - '.github/workflows/validate-rules.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sigma:
+    name: Sigma (синтаксис + конвертация)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Установка sigma-cli
+        run: pip install sigma-cli pysigma-backend-elasticsearch
+      - name: Проверка синтаксиса всех правил Sigma
+        run: sigma check rules/sigma/
+      - name: Пробная конвертация в Lucene (Wazuh Indexer = OpenSearch)
+        run: sigma convert -t lucene -p ecs_windows rules/sigma/ || true
+
+  wazuh-xml:
+    name: Wazuh (XML well-formed)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверка XML
+        run: |
+          sudo apt-get update && sudo apt-get install -y libxml2-utils
+          # wazuh-ruleset оборачивается в единый корень, проверяем well-formedness
+          for f in rules/wazuh/*.xml; do
+            echo "== $f"
+            printf '<root>' > /tmp/w.xml
+            sed 's/<?xml[^>]*?>//' "$f" >> /tmp/w.xml
+            printf '</root>' >> /tmp/w.xml
+            xmllint --noout /tmp/w.xml
+          done
+
+  unit-tests:
+    name: Unit-тесты правил
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Запуск тестов детекта
+        run: python tests/run_tests.py

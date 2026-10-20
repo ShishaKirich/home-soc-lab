@@ -1,0 +1,35 @@
+title: Подозрительный доступ к памяти LSASS
+id: 6d1c3a2e-5b1f-4c3e-9a51-0f3b8d2a1002
+status: experimental
+description: Процесс открыл lsass.exe с правами, характерными для чтения памяти (кража учётных данных).
+author: Kirill Shishkin
+date: 2026-10-20
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+tags:
+    - attack.credential-access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        GrantedAccess:
+            - '0x1010'
+            - '0x1410'
+            - '0x1438'
+            - '0x143a'
+            - '0x1fffff'
+    filter_system:
+        SourceImage|endswith:
+            - '\MsMpEng.exe'
+            - '\wmiprvse.exe'
+            - '\svchost.exe'
+            - '\wininit.exe'
+            - '\csrss.exe'
+    condition: selection and not filter_system
+falsepositives:
+    - EDR/антивирусы сторонних вендоров (добавить в фильтр)
+level: high
+# Wazuh: rule 100110

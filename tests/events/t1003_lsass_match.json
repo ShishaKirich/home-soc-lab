@@ -1,0 +1,9 @@
+{
+  "rule": "proc_access_win_lsass_access.yml",
+  "expect": "match",
+  "event": {
+    "TargetImage": "C:\\Windows\\system32\\lsass.exe",
+    "GrantedAccess": "0x1410",
+    "SourceImage": "C:\\Users\\user\\AppData\\Local\\Temp\\mimi.exe"
+  }
+}

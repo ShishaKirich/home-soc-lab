@@ -1,0 +1,8 @@
+{
+  "rule": "proc_creation_win_clear_eventlog.yml",
+  "expect": "match",
+  "event": {
+    "Image": "C:\\Windows\\System32\\wevtutil.exe",
+    "CommandLine": "wevtutil.exe cl Security"
+  }
+}

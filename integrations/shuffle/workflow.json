@@ -1,0 +1,79 @@
+{
+  "_comment": "Скелет Shuffle-воркфлоу для SOAR-конвейера (пункт 12). Импорт: Shuffle UI -> Import. Секреты (api_key) заменены плейсхолдерами и задаются как Shuffle org secrets, не хранятся здесь.",
+  "name": "wazuh-to-thehive",
+  "description": "Wazuh alert -> enrichment -> TheHive case -> Telegram",
+  "triggers": [
+    {
+      "name": "wazuh_webhook",
+      "type": "WEBHOOK",
+      "note": "URL вебхука вставить в ossec.conf integration hook_url"
+    }
+  ],
+  "actions": [
+    {
+      "id": "parse",
+      "name": "parse_alert",
+      "app": "Shuffle Tools",
+      "action": "Get values from JSON",
+      "parameters": {
+        "json": "$wazuh_webhook.body",
+        "fields": "rule.id,rule.level,rule.description,rule.mitre.id,agent.name,data.src_ip,data.win.eventdata.hashes"
+      }
+    },
+    {
+      "id": "enrich_ip",
+      "name": "abuseipdb_check",
+      "app": "AbuseIPDB",
+      "action": "Check IP",
+      "condition": "$parse.data.src_ip != ''",
+      "parameters": {
+        "apikey": "${ABUSEIPDB_API_KEY}",
+        "ip": "$parse.data.src_ip"
+      }
+    },
+    {
+      "id": "enrich_hash",
+      "name": "virustotal_check",
+      "app": "VirusTotal",
+      "action": "Get hash report",
+      "condition": "$parse.data.win.eventdata.hashes != ''",
+      "parameters": {
+        "apikey": "${VIRUSTOTAL_API_KEY}",
+        "hash": "$parse.data.win.eventdata.hashes"
+      }
+    },
+    {
+      "id": "create_case",
+      "name": "thehive_create_case",
+      "app": "TheHive5",
+      "action": "Create alert",
+      "parameters": {
+        "url": "http://192.168.56.50:9000",
+        "apikey": "${THEHIVE_API_KEY}",
+        "title": "[Wazuh] $parse.rule.description",
+        "description": "Host: $parse.agent.name\\nRule: $parse.rule.id (level $parse.rule.level)\\nMITRE: $parse.rule.mitre.id\\nAbuseIPDB score: $enrich_ip.data.abuseConfidenceScore",
+        "severity": 2,
+        "tags": "wazuh,soc-lab,$parse.rule.mitre.id",
+        "observables": "[{\"dataType\":\"ip\",\"data\":\"$parse.data.src_ip\"},{\"dataType\":\"hostname\",\"data\":\"$parse.agent.name\"}]"
+      }
+    },
+    {
+      "id": "notify",
+      "name": "telegram_notify",
+      "app": "Telegram",
+      "action": "Send message",
+      "parameters": {
+        "apikey": "${TELEGRAM_BOT_TOKEN}",
+        "chat_id": "${TELEGRAM_CHAT_ID}",
+        "message": "Создан кейс TheHive: $parse.rule.description (host $parse.agent.name)"
+      }
+    }
+  ],
+  "branches": [
+    {"source": "parse", "destination": "enrich_ip"},
+    {"source": "parse", "destination": "enrich_hash"},
+    {"source": "enrich_ip", "destination": "create_case"},
+    {"source": "enrich_hash", "destination": "create_case"},
+    {"source": "create_case", "destination": "notify"}
+  ]
+}

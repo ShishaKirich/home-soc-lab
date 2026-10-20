@@ -1,0 +1,27 @@
+title: Очистка журналов событий Windows
+id: 6d1c3a2e-5b1f-4c3e-9a51-0f3b8d2a1004
+status: experimental
+description: 'Очистка журналов через wevtutil или Clear-EventLog — типичное заметание следов.'
+author: Kirill Shishkin
+date: 2026-10-20
+references:
+    - https://attack.mitre.org/techniques/T1070/001/
+tags:
+    - attack.defense-evasion
+    - attack.t1070.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_wevtutil:
+        Image|endswith: '\wevtutil.exe'
+        CommandLine|contains|windash:
+            - ' cl '
+            - ' clear-log '
+    selection_ps:
+        CommandLine|contains: 'Clear-EventLog'
+    condition: 1 of selection_*
+falsepositives:
+    - Плановое обслуживание (редко)
+level: high
+# Wazuh: rule 100150

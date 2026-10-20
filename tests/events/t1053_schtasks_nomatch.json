@@ -1,0 +1,8 @@
+{
+  "rule": "proc_creation_win_schtasks_suspicious.yml",
+  "expect": "nomatch",
+  "event": {
+    "Image": "C:\\Windows\\System32\\schtasks.exe",
+    "CommandLine": "schtasks /query /fo LIST /v"
+  }
+}

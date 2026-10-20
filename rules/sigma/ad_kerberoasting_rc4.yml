@@ -1,0 +1,27 @@
+title: Возможный Kerberoasting (запрос TGS с RC4)
+id: 6d1c3a2e-5b1f-4c3e-9a51-0f3b8d2a1006
+status: experimental
+description: Запрос сервисного билета Kerberos (4769) со слабым шифрованием RC4 — типичный признак Kerberoasting.
+author: Kirill Shishkin
+date: 2026-10-20
+references:
+    - https://attack.mitre.org/techniques/T1558/003/
+tags:
+    - attack.credential-access
+    - attack.t1558.003
+logsource:
+    product: windows
+    service: security
+detection:
+    selection:
+        EventID: 4769
+        TicketEncryptionType: '0x17'
+    filter_computer:
+        ServiceName|endswith: '$'
+    filter_krbtgt:
+        ServiceName: 'krbtgt'
+    condition: selection and not 1 of filter_*
+falsepositives:
+    - Легаси-системы, использующие RC4 (нужно инвентаризировать и исключить)
+level: high
+# Wazuh: rule 100300
