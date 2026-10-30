@@ -23,5 +23,4 @@
 
 **Итог:** 0 / 16 техник подтверждено.
 
-Для наглядности в резюме: экспортируйте слой в [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)
-(раскрасьте покрытые техники) и приложите скриншот в README.
+После проверки техник покрытие будет экспортировано слоем в [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/).

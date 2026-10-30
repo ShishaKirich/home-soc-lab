@@ -1,5 +1,5 @@
 {
-  "_comment": "Скелет Shuffle-воркфлоу для SOAR-конвейера (пункт 12). Импорт: Shuffle UI -> Import. Секреты (api_key) заменены плейсхолдерами и задаются как Shuffle org secrets, не хранятся здесь.",
+  "_comment": "Скелет Shuffle-воркфлоу для SOAR-конвейера. Импорт: Shuffle UI -> Import. Секреты (api_key) заменены плейсхолдерами и задаются как Shuffle org secrets, не хранятся здесь.",
   "name": "wazuh-to-thehive",
   "description": "Wazuh alert -> enrichment -> TheHive case -> Telegram",
   "triggers": [

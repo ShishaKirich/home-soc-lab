@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Отчёт по ложным срабатываниям (False Positive) правил Wazuh.
 
-Методика (пункт 4 плана):
+Методика:
   1. Откатить win10 к снимку baseline-telemetry.
   2. Прожить на ВМ «обычный день» без атак (генератор фоновой активности —
      scripts/baseline_noise.ps1), 1-2 часа, НЕ запуская Atomic Red Team.
